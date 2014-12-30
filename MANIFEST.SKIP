@@ -1,4 +1,5 @@
 MANIFEST.bak
+MANIFEST.SKIP
 Makefile.old
 Makefile$
 README.pod
