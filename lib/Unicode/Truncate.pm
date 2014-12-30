@@ -155,24 +155,25 @@ Unicode::Truncate - Unicode-aware efficient string truncation
 
 =head1 DESCRIPTION
 
-This module is for truncating UTF-8 encoded Unicode text with the least amount of data corruption possible. The truncation length as specified in the second argument is in terms of *bytes*, not characters or code-points. The resulting string will be no more than this number of bytes long after UTF-8 encoding.
+This module is for truncating UTF-8 encoded Unicode text with the least amount of data corruption possible. The truncation length as specified in the second argument is in terms of *bytes*, not characters or code-points. The resulting string will be no longer than this number of bytes after UTF-8 encoding.
 
-If you use a simple C<substr> to truncate UTF-8 encoded text, you are likely to cause data corruption in various ways. If you use this module's C<truncate_utf8>, all truncated strings will continue to be valid UTF-8, in other words it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character.
-
-=head1 RATIONALE
-
-Why not just use C<substr> on a string before UTF-8 encoding it? The main problem is that the number of bytes that an encoded string will consume is not known until you encode it. It depends on how many "high" code-point characters are in the string, how "high" those code-points are, the normalisation form chosen, and (relatedly) how many combining marks are used.
-
-I knew I had to write this module after I asked Tom Christiansen about the best way to truncate unicode at the byte-level and he got angry at me and told me never to do that. :)
-
-Of course in a perfect world we would only need to worry about the amount of space some text takes up on the screen, in the real world we often have to or want to make sure things fit within certain byte size capacity limits. Many data-bases, network protocols, and file-formats contain byte-length restrictions.
-
-One interesting aspect of unicode's combining marks is that there is no specified limitation to the number of combining marks that can be applied. So in some interpretations of this, a single decomposed unicode character could take up an infinite number of bytes. However, there are various recommendations such as the unicode standard L<UAX15-D3|http://www.unicode.org/reports/tr15/#UAX15-D3> "stream-safe" limit of 30. Reportedly the largest known "legitimate" use is a 1 base + 8 combining marks grapheme used in a tibetan script.
+If you use a simple C<substr> to truncate UTF-8 encoded text, you are likely to cause data corruption in various ways. If you instead use this module's C<truncate_utf8>, all truncated strings will continue to be valid UTF-8: it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character.
 
 
 =head1 ELLIPSIS
 
-When a string was truncated, C<truncate_utf8> will indicate this by appending an ellipsis. By default this is the character U+2026 (…), however you can use any string instead by passing it in as the third argument. Note that in UTF-8 encoding the default ellipsis consumes 3 bytes, just as if you had instead used 3 periods in a row.
+When a string is truncated, C<truncate_utf8> indicates this by appending an ellipsis. By default this is the character U+2026 (…) however you can use any other string by passing it in as the third argument. Note that in UTF-8 encoding the default ellipsis consumes 3 bytes (the same as 3 periods in a row).
+
+
+=head1 RATIONALE
+
+Why not just use C<substr> on a string before UTF-8 encoding it? The main problem is that the number of bytes that an encoded string will consume is not known until you encode it. It depends on how many "high" code-points are in the string, how "high" those code-points are, the normalisation form chosen, and (relatedly) how many combining marks are used.
+
+I knew I had to write this module after I asked Tom Christiansen about the best way to truncate unicode to fit in fixed-byte-size fields and he got angry at me and told me never to do that. :)
+
+Of course in a perfect world we would only need to worry about the amount of space some text takes up on the screen, in the real world we often have to or want to make sure things fit within certain byte size capacity limits. Many data-bases, network protocols, and file-formats contain byte-length restrictions.
+
+One interesting aspect of unicode's combining marks is that there is no specified limit to the number of combining marks that can be applied. So in some interpretations of this, a single decomposed unicode character could take up an infinite number of bytes. However, there are various recommendations such as the unicode standard L<UAX15-D3|http://www.unicode.org/reports/tr15/#UAX15-D3> "stream-safe" limit of 30. Reportedly the largest known "legitimate" use is a 1 base + 8 combining marks grapheme used in a tibetan script.
 
 
 =head1 IMPLEMENTATION
@@ -193,13 +194,14 @@ There are several similar modules such as L<Text::Truncate>, L<String::Truncate>
 A reasonable 99% solution is to encode your string as UTF-8, truncate at the byte-level with C<substr>, decode with C<Encode::FB_QUIET>, and then re-encode it to UTF-8. This will ensure that the output is always valid UTF-8, but will still risk corrupting unicode text that contains combining marks.
 
 
-
-
 =head1 BUGS
 
 Of course I haven't tested this on all the writing systems of the world so I don't know the severity of the corruption in all situations. It's possible that corruption can be minimised in additional ways without sacrificing the simplicity or efficiency of the algorithm. One obvious improvement for languages that use white-space is to chop off the last (potentially partial) word up to the next whitespace character: C<s/\S+$//> (although you'll have to worry about the ellipsis yourself in this case).
 
+Currently building this module requires L<Inline::Filters::Ragel> to be installed. I'd like to add an option to L<Inline::Module> that lets ragel be run at dist time to solve this.
+
 Perl internally supports characters outside what is officially unicode. This module only works with the official UTF-8 range so if you are using this perl extension (perhaps for some sort of non-unicode sentinel value) this module will throw an exception indicating invalid UTF-8 encoding.
+
 
 =head1 AUTHOR
 
