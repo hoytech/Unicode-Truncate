@@ -4,7 +4,6 @@ use ExtUtils::MakeMaker;
 
 use lib 'inc';
 use Inline::Module;
-BEGIN { *Inline::Module::included_modules = sub { [] } } ## don't bundle in 100s of KBs of modules.. use build-time deps instead
 
 my %args = (
     NAME => 'Unicode::Truncate',
@@ -28,6 +27,7 @@ my %args = (
         stub => 'Unicode::Truncate::Inline',
         ilsm => 'Inline::C',
         makestub => 1,
+        bundle => 0,
       },
     },
     META_MERGE => {
