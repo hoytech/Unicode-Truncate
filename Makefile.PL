@@ -11,8 +11,8 @@ my %args = (
     PREREQ_PM => {
     },
     BUILD_REQUIRES => {
-      'Inline::C' => 0,
-      'Inline::Module' => 0,
+      'Inline::Module' => '0.32',
+      'Inline::C' => '0.71',
       'Inline::Filters::Ragel' => 0, ## unfortunately... (requires ragel binary to be installed)
     },
     LIBS => [],
@@ -38,7 +38,7 @@ my %args = (
       prereqs     => {
         develop => {
           requires => {
-            'Inline::CPP'    => '0.71',
+            'Inline::C' => '0.71',
             'Inline::Module' => '0.32',
           },
         },
