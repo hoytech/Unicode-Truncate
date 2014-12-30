@@ -1,7 +1,9 @@
 use strict;
 
+use lib 'inc'; ## Just to placate Inline::Module warning
 use ExtUtils::MakeMaker;
-
+use Inline::Module;
+BEGIN { *Inline::Module::included_modules = sub { [] } } ## don't bundle in 100s of KBs of modules.. they are build-time deps
 
 my %args = (
     NAME => 'Unicode::Truncate',
@@ -27,17 +29,12 @@ my %args = (
         makestub => 1,
       },
     },
-);
-
-
-my $eummv = eval ($ExtUtils::MakeMaker::VERSION);
-if ($eummv >= 6.45) {
-    $args{META_MERGE} = {
+    META_MERGE => {
         resources => {
             repository => 'git://github.com/hoytech/Unicode-Truncate.git',
             bugtracker => 'https://github.com/hoytech/Unicode-Truncate/issues',
         },
-    };
-}
+    },
+);
 
 WriteMakefile(%args);
