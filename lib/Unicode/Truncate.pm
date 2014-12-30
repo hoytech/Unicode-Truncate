@@ -169,9 +169,9 @@ Truncating post-encoding may result in invalid UTF-8 partials at the end of your
 
 I knew I had to write this module after I asked Tom Christiansen about the best way to truncate unicode to fit in fixed-byte fields and he got angry at me and told me to never do that. :)
 
-Of course in a perfect world we would only need to worry about the amount of space some text takes up on the screen, in the real world we often have to or want to make sure things fit within certain byte size capacity limits. Many data-bases, network protocols, and file-formats require honouring byte-length restrictions. Even if they automatically truncate for you, are they doing it properly and consistently? On many file-systems if you use UTF-8 in path names you are subject to a byte-size limit. Many APIs that use C structs have fixed limits as well. You may even wish to do things like guarantee that a collection of news headlines will fit in a single ethernet packet.
+Of course in a perfect world we would only need to worry about the amount of space some text takes up on the screen, in the real world we often have to or want to make sure things fit within certain byte size capacity limits. Many data-bases, network protocols, and file-formats require honouring byte-length restrictions. Even if they automatically truncate for you, are they doing it properly and consistently? On many file-systems, file and directory names are subject to byte-size limits. Many APIs that use C structs have fixed limits as well. You may even wish to do things like guarantee that a collection of news headlines will fit in a single ethernet packet.
 
-One interesting aspect of unicode's combining marks is that there is no specified limit to the number of combining marks that can be applied. So in some interpretations a single decomposed unicode character can take up an arbitrarily large number of bytes in its UTF-8 encoding. However, there are various recommendations such as the unicode standard L<UAX15-D3|http://www.unicode.org/reports/tr15/#UAX15-D3> "stream-safe" limit of 30. Reportedly the largest known "legitimate" use is a 1 base + 8 combining marks grapheme used in a tibetan script.
+One interesting aspect of unicode's combining marks is that there is no specified limit to the number of combining marks that can be applied. So in some interpretations a single decomposed unicode character can take up an arbitrarily large number of bytes in its UTF-8 encoding. However, there are various recommendations such as the unicode standard L<UAX15-D3|http://www.unicode.org/reports/tr15/#UAX15-D3> "stream-safe" limit of 30. Reportedly the largest known "legitimate" use is a 1 base + 8 combining marks grapheme used in a Tibetan script.
 
 
 =head1 ELLIPSIS
@@ -198,10 +198,14 @@ There are several similar modules such as L<Text::Truncate>, L<String::Truncate>
 
 A reasonable "99%" solution is to encode your string as UTF-8, truncate at the byte-level with C<substr>, decode with C<Encode::FB_QUIET>, and then re-encode it to UTF-8. This will ensure that the output is always valid UTF-8, but will still risk corrupting unicode text that contains combining marks.
 
+Ricardo Signes described a very correct but inefficient algorithm: use L<Unicode::GCString> and strip off extended grapheme clusters from the end (or add one-by-one from the start) until the length of the UTF-8 encoded string exceeds your byte-limit.
+
 
 =head1 BUGS
 
-Of course I haven't tested this on all the writing systems of the world so I don't know the severity of the corruption in all situations. It's possible that the corruption can be minimised in additional ways without sacrificing the simplicity or efficiency of the algorithm. One obvious improvement for languages that use white-space is to chop off the last (potentially partial) word up to the next whitespace block: C<s/\S+$//> (note you'll have to worry about the ellipsis yourself in this case).
+This module currently only implements a sub-set of unicode's L<grapheme cluster boundary rules|http://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries>. Eventually I plan to extend this so the module "does the right thing" in more cases. Of course I can't test this on all the writing systems of the world so I don't know the severity of the corruption in all situations. It's possible that the corruption can be minimised in additional ways without sacrificing the simplicity or efficiency of the algorithm. If you have any ideas please let me know and I'll try to incorporate them.
+
+One obvious enhancement for languages that use white-space is to chop off the last (potentially partial) word up to the next whitespace block: C<s/\S+$//> (note you'll have to worry about the ellipsis yourself in this case).
 
 Currently building this module requires L<Inline::Filters::Ragel> to be installed. I'd like to add an option to L<Inline::Module> that has ragel run at dist time instead.
 
