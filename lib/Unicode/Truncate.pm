@@ -10,7 +10,7 @@ use Encode;
 
 require Exporter;
 use base 'Exporter';
-our @EXPORT = qw(truncate_utf8s);
+our @EXPORT = qw(truncate_utf8);
 
 
 use Unicode::Truncate::Inline
@@ -18,11 +18,11 @@ use Unicode::Truncate::Inline
       FILTERS => [ sub { require Inline::Filters::Ragel; Inline::Filters::Ragel::ragel('-G2')->(@_) } ];
 
 
-sub truncate_utf8s {
+sub truncate_utf8 {
   my ($input, $len, $ellipsis) = @_;
 
-  croak "need to pass an input string to truncate_utf8s" if !defined $input;
-  croak "need to pass a positive truncation length to truncate_utf8s" if !defined $len || $len < 0;
+  croak "need to pass an input string to truncate_utf8" if !defined $input;
+  croak "need to pass a positive truncation length to truncate_utf8" if !defined $len || $len < 0;
 
   $ellipsis = '…' if !defined $ellipsis;
   $ellipsis = encode('UTF-8', $ellipsis);
@@ -90,7 +90,7 @@ void _scan_string(SV *string, size_t trunc_size) {
   int cs, act;
  
   SvUPGRADE(string, SVt_PV);
-  if (!SvPOK(string)) croak("attempting to truncate_utf8s non-string object");
+  if (!SvPOK(string)) croak("attempting to truncate_utf8 non-string object");
 
   len = SvCUR(string);
   ts = start = p = SvPV(string, len);
@@ -144,20 +144,20 @@ Unicode::Truncate - Unicode-aware efficient string truncation
 
     use Unicode::Truncate;
 
-    truncate_utf8s("hello world", 7);
+    truncate_utf8("hello world", 7);
     ## "hell…";
 
-    truncate_utf8s("hello world", 7, '');
+    truncate_utf8("hello world", 7, '');
     ## "hello w"
 
-    truncate_utf8s('深圳', 7);
+    truncate_utf8('深圳', 7);
     ## "深…"
 
 =head1 DESCRIPTION
 
 This module is for truncating UTF-8 encoded Unicode text with the least amount of data corruption possible. The truncation length as specified in the second argument is in terms of *bytes*, not characters or code-points. The resulting string will be no more than this number of bytes long after UTF-8 encoding.
 
-If you use a simple C<substr> to truncate UTF-8 encoded text, you are likely to cause data corruption in various ways. If you use this module's C<truncate_utf8s>, all truncated strings will continue to be valid UTF-8, in other words it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character.
+If you use a simple C<substr> to truncate UTF-8 encoded text, you are likely to cause data corruption in various ways. If you use this module's C<truncate_utf8>, all truncated strings will continue to be valid UTF-8, in other words it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character.
 
 =head1 RATIONALE
 
