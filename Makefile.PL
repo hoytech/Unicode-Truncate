@@ -31,10 +31,18 @@ my %args = (
       },
     },
     META_MERGE => {
-        resources => {
-            repository => 'git://github.com/hoytech/Unicode-Truncate.git',
-            bugtracker => 'https://github.com/hoytech/Unicode-Truncate/issues',
+      resources => {
+        repository => 'git://github.com/hoytech/Unicode-Truncate.git',
+        bugtracker => 'https://github.com/hoytech/Unicode-Truncate/issues',
+      },
+      prereqs     => {
+        develop => {
+          requires => {
+            'Inline::CPP'    => '0.71',
+            'Inline::Module' => '0.32',
+          },
         },
+      },
     },
 );
 
