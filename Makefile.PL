@@ -1,9 +1,10 @@
 use strict;
 
-use lib 'inc'; ## Just to placate Inline::Module warning
 use ExtUtils::MakeMaker;
+
+use lib 'inc';
 use Inline::Module;
-BEGIN { *Inline::Module::included_modules = sub { [] } } ## don't bundle in 100s of KBs of modules.. they are build-time deps
+BEGIN { *Inline::Module::included_modules = sub { [] } } ## don't bundle in 100s of KBs of modules.. use build-time deps instead
 
 my %args = (
     NAME => 'Unicode::Truncate',
