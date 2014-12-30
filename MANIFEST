@@ -1,4 +1,8 @@
 Changes
+lib/Unicode/Truncate.pm
+lib/Unicode/Truncate/Inline.pm
 Makefile.PL
 MANIFEST
 MANIFEST.SKIP
+t/basic.t
+util/generate.pl

@@ -10,7 +10,7 @@ use Encode;
 
 require Exporter;
 use base 'Exporter';
-our @EXPORT = qw(truncate_bytes);
+our @EXPORT = qw(truncate_utf8s);
 
 
 use Unicode::Truncate::Inline
@@ -18,11 +18,11 @@ use Unicode::Truncate::Inline
       FILTERS => [ sub { require Inline::Filters::Ragel; Inline::Filters::Ragel::ragel('-G2')->(@_) } ];
 
 
-sub truncate_bytes {
+sub truncate_utf8s {
   my ($input, $len, $ellipsis) = @_;
 
-  croak "need to pass an input string to truncate_bytes" if !defined $input;
-  croak "need to pass a positive truncation length to truncate_bytes" if !defined $len || $len < 0;
+  croak "need to pass an input string to truncate_utf8s" if !defined $input;
+  croak "need to pass a positive truncation length to truncate_utf8s" if !defined $len || $len < 0;
 
   $ellipsis = '…' if !defined $ellipsis;
   $ellipsis = encode('UTF-8', $ellipsis);
@@ -90,7 +90,7 @@ void _scan_string(SV *string, size_t trunc_size) {
   int cs, act;
  
   SvUPGRADE(string, SVt_PV);
-  if (!SvPOK(string)) croak("attempting to truncate_bytes non-string object");
+  if (!SvPOK(string)) croak("attempting to truncate_utf8s non-string object");
 
   len = SvCUR(string);
   ts = start = p = SvPV(string, len);
@@ -144,17 +144,20 @@ Unicode::Truncate - Unicode-aware efficient string truncation
 
     use Unicode::Truncate;
 
-    my $output = truncate_bytes("hello world", 7);
+    truncate_utf8s("hello world", 7);
     ## "hell…";
 
-    my $output = truncate_bytes("hello world", 7, '');
+    truncate_utf8s("hello world", 7, '');
     ## "hello w"
+
+    truncate_utf8s('深圳', 7);
+    ## "深…"
 
 =head1 DESCRIPTION
 
-This module is for truncating UTF-8 encoded Unicode text with the least amount of data corruption possible. The truncation length is specified in terms of *bytes*, not characters or code-points.
+This module is for truncating UTF-8 encoded Unicode text with the least amount of data corruption possible. The truncation length as specified in the second argument is in terms of *bytes*, not characters or code-points. The resulting string will be no more than this number of bytes long after UTF-8 encoding.
 
-If you use a simple C<substr> to truncate UTF-8 encoded text, you are likely to cause data corruption in various ways. If you use this module's C<truncate_bytes>, all truncated strings will continue to be valid UTF-8, in other words it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character.
+If you use a simple C<substr> to truncate UTF-8 encoded text, you are likely to cause data corruption in various ways. If you use this module's C<truncate_utf8s>, all truncated strings will continue to be valid UTF-8, in other words it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character.
 
 =head1 RATIONALE
 
@@ -164,7 +167,12 @@ I knew I had to write this module after I asked Tom Christiansen about the best 
 
 Of course in a perfect world we would only need to worry about the amount of space some text takes up on the screen, in the real world we often have to or want to make sure things fit within certain byte size capacity limits. Many data-bases, network protocols, and file-formats contain byte-length restrictions.
 
-One interesting aspect of unicode's combining marks is that there is no specified limitation to the number of combining marks that can be applied. So in some interpretations of this, a single decomposed unicode character could take up an infinite number of bytes. However, there are various recommendations such as the unicode standard L<UAX15-D3|http://www.unicode.org/reports/tr15/#UAX15-D3> "stream-safe" limit of 30. Reportedly the largest known "legitimate" use is the 1 base + 8 combining marks used in a tibetan grapheme.
+One interesting aspect of unicode's combining marks is that there is no specified limitation to the number of combining marks that can be applied. So in some interpretations of this, a single decomposed unicode character could take up an infinite number of bytes. However, there are various recommendations such as the unicode standard L<UAX15-D3|http://www.unicode.org/reports/tr15/#UAX15-D3> "stream-safe" limit of 30. Reportedly the largest known "legitimate" use is a 1 base + 8 combining marks grapheme used in a tibetan script.
+
+
+=head1 ELLIPSIS
+
+When a string was truncated, C<truncate_utf8> will indicate this by appending an ellipsis. By default this is the character U+2026 (…), however you can use any string instead by passing it in as the third argument. Note that in UTF-8 encoding the default ellipsis consumes 3 bytes, just as if you had instead used 3 periods in a row.
 
 
 =head1 IMPLEMENTATION
