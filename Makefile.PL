@@ -8,6 +8,11 @@ my %args = (
     VERSION_FROM => 'lib/Unicode/Truncate.pm',
     PREREQ_PM => {
     },
+    BUILD_REQUIRES => {
+      'Inline::C' => 0,
+      'Inline::Module' => 0,
+      'Inline::Filters::Ragel' => 0, ## unfortunately... (requires ragel binary to be installed)
+    },
     LIBS => [],
     DEFINE => '',
     LICENSE => 'perl',
