@@ -35,11 +35,12 @@ my %args = (
         repository => 'git://github.com/hoytech/Unicode-Truncate.git',
         bugtracker => 'https://github.com/hoytech/Unicode-Truncate/issues',
       },
-      prereqs     => {
+      prereqs => {
         develop => {
           requires => {
             'Inline::C' => '0.72',
             'Inline::Module' => '0.32',
+            'Inline::Filters::Ragel' => '0.101',
           },
         },
       },
