@@ -13,9 +13,7 @@ use base 'Exporter';
 our @EXPORT = qw(truncate_utf8);
 
 
-use Unicode::Truncate::Inline
-      C => 'DATA',
-      FILTERS => [ sub { require Inline::Filters::Ragel; Inline::Filters::Ragel::ragel('-G2')->(@_) } ];
+use Unicode::Truncate::Inline C => 'DATA', FILTERS => [ [ Ragel => '-G2' ] ];
 
 
 sub truncate_utf8 {
