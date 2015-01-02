@@ -1,3 +1,6 @@
+0.102   2015-01-02
+  * Use Inline::Filters::* plug-in infrastructure
+
 0.101   2014-12-30
   * Use Inline::Module's new "bundle => 0" feature (thanks Ingy)
   * Tweak docs a bit
