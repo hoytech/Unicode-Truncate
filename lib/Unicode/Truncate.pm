@@ -165,7 +165,7 @@ Why not just use C<substr> on a string before UTF-8 encoding it? The main proble
 
 Truncating post-encoding may result in invalid UTF-8 partials at the end of your string, as well as cutting in front of combining marks.
 
-I knew I had to write this module after I asked Tom Christiansen about the best way to truncate unicode to fit in fixed-byte fields and he got angry at me and told me to never do that. :)
+I knew I had to write this module after I asked Tom Christiansen about the best way to truncate unicode to fit in fixed-byte fields and he got angry and told me to never do that. :)
 
 Of course in a perfect world we would only need to worry about the amount of space some text takes up on the screen, in the real world we often have to or want to make sure things fit within certain byte size capacity limits. Many data-bases, network protocols, and file-formats require honouring byte-length restrictions. Even if they automatically truncate for you, are they doing it properly and consistently? On many file-systems, file and directory names are subject to byte-size limits. Many APIs that use C structs have fixed limits as well. You may even wish to do things like guarantee that a collection of news headlines will fit in a single ethernet packet.
 
@@ -196,7 +196,9 @@ There are several similar modules such as L<Text::Truncate>, L<String::Truncate>
 
 A reasonable "99%" solution is to encode your string as UTF-8, truncate at the byte-level with C<substr>, decode with C<Encode::FB_QUIET>, and then re-encode it to UTF-8. This will ensure that the output is always valid UTF-8, but will still risk corrupting unicode text that contains combining marks.
 
-Ricardo Signes described a very correct but inefficient algorithm: use L<Unicode::GCString> and strip off extended grapheme clusters from the end (or add one-by-one from the start) until the length of the UTF-8 encoded string exceeds your byte-limit.
+Ricardo Signes suggested an algorithm using L<Unicode::GCString> which would be very correct but likely less efficient.
+
+It may be possible to use the regexp engine's C<\X> combined with C<(?{}) in some way but I haven't been able to figure that out.
 
 
 =head1 BUGS
