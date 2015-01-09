@@ -23,80 +23,6 @@ __DATA__
 __C__
 
 
-
-SV *truncate_egc(SV *input, long trunc_len, ...) {
-  Inline_Stack_Vars;
-
-  size_t trunc_size;
-  SV *ellipsis;
-  char *input_p, *ellipsis_p;
-  size_t input_len, ellipsis_len;
-  size_t cut_len;
-  int truncation_required, error_occurred;
-  SV *output;
-  char *output_p;
-  size_t output_len;
-
-  SvUPGRADE(input, SVt_PV);
-  if (!SvPOK(input)) croak("need to pass a string in as first argument to truncate_egc");
-
-  input_len = SvCUR(input);
-  input_p = SvPV(input, input_len);
-
-  if (trunc_len < 0) croak("trunc size argument to truncate_egc must be >= 0");
-  trunc_size = (size_t) trunc_len;
-
-  if (Inline_Stack_Items == 2) {
-    ellipsis_len = 3;
-    ellipsis_p = "\xE2\x80\xA6"; // UTF-8 encoded U+2026 ellipsis character
-  } else if (Inline_Stack_Items == 3) {
-    ellipsis = Inline_Stack_Item(2);
-
-    SvUPGRADE(ellipsis, SVt_PV);
-    if (!SvPOK(ellipsis)) croak("ellipsis must be a string in 3rd argument to truncate_egc");
-
-    ellipsis_len = SvCUR(ellipsis);
-    ellipsis_p = SvPV(ellipsis, ellipsis_len);
-
-    if (!is_utf8_string(ellipsis_p, ellipsis_len)) croak("ellipsis must be utf-8 encoded in 3rd argument to truncate_egc");
-  } else if (Inline_Stack_Items > 3) {
-    croak("too many items passed to truncate_egc");
-  }
-
-  if (ellipsis_len > trunc_size) croak("length of ellipsis is longer than truncation length");
-  trunc_size -= ellipsis_len;
-
-  _scan_egc(input_p, input_len, trunc_size, &truncation_required, &cut_len, &error_occurred);
-
-  if (error_occurred) croak("input string not valid UTF-8 (detected at byte offset %lu)", cut_len);
-
-  if (truncation_required) {
-    output_len = cut_len + ellipsis_len;
-
-    output = newSVpvn("", 0);
-
-    SvGROW(output, output_len);
-    SvCUR_set(output, output_len);
-
-    output_p = SvPV(output, output_len);
-
-    memcpy(output_p, input_p, cut_len);
-    memcpy(output_p + cut_len, ellipsis_p, ellipsis_len);
-  } else {
-    output = newSVpvn(input_p, input_len);
-  }
-
-  SvUTF8_on(output);
-
-  return output;
-}
-
-SV *truncate_egc_inplace(SV *input, long trunc_len, ...) {
-  croak("not impl");
-}
-
-
-
 %%{
   machine egc_scanner;
 
@@ -104,24 +30,24 @@ SV *truncate_egc_inplace(SV *input, long trunc_len, ...) {
 }%%
 
 
-void _scan_egc(char *input, size_t len, size_t trunc_size, int *truncation_required_out, size_t *cut_len_out, int *error_occurred_out) {
+static void _scan_egc(char *input, size_t len, size_t trunc_size, int *truncation_required_out, size_t *cut_len_out, int *error_occurred_out) {
   size_t cut_len = 0;
   int truncation_required = 0, error_occurred = 0;
 
-  char *start, *p, *pe, *eof, *ts, *te;
+  char *p, *pe, *eof, *ts, *te;
   int cs, act;
  
-  ts = start = p = input;
+  ts = p = input;
   te = eof = pe = p + len;
 
   %%{
     action record_cut {
-      if (p - start >= trunc_size) {
+      if (p - input >= trunc_size) {
         truncation_required = 1;
         goto done;
       }
 
-      cut_len = te - start;
+      cut_len = te - input;
     }
 
 
@@ -164,13 +90,134 @@ void _scan_egc(char *input, size_t len, size_t trunc_size, int *truncation_requi
 
   if (cs < egc_scanner_first_final) {
     error_occurred = 1;
-    cut_len = p - start;
+    cut_len = p - input;
   }
 
   *truncation_required_out = truncation_required;
   *cut_len_out = cut_len;
   *error_occurred_out = error_occurred;
 }
+
+
+
+
+
+
+static SV *_truncate(SV *input, long trunc_len, SV *ellipsis, int in_place, const char *func_name) {
+  size_t trunc_size;
+  char *input_p, *ellipsis_p;
+  size_t input_len, ellipsis_len;
+  size_t cut_len;
+  int truncation_required, error_occurred;
+  SV *output;
+  char *output_p;
+  size_t output_len;
+
+  SvUPGRADE(input, SVt_PV);
+  if (!SvPOK(input)) croak("need to pass a string in as first argument to %s", func_name);
+
+  input_len = SvCUR(input);
+  input_p = SvPV(input, input_len);
+
+  if (trunc_len < 0) croak("trunc size argument to %s must be >= 0", func_name);
+  trunc_size = (size_t) trunc_len;
+
+  if (ellipsis == NULL) {
+    ellipsis_len = 3;
+    ellipsis_p = "\xE2\x80\xA6"; // UTF-8 encoded U+2026 ellipsis character
+  } else {
+    SvUPGRADE(ellipsis, SVt_PV);
+    if (!SvPOK(ellipsis)) croak("ellipsis must be a string in 3rd argument to %s", func_name);
+
+    ellipsis_len = SvCUR(ellipsis);
+    ellipsis_p = SvPV(ellipsis, ellipsis_len);
+
+    if (!is_utf8_string(ellipsis_p, ellipsis_len)) croak("ellipsis must be utf-8 encoded in 3rd argument to %s", func_name);
+  }
+
+  if (ellipsis_len > trunc_size) croak("length of ellipsis is longer than truncation length in %s", func_name);
+  trunc_size -= ellipsis_len;
+
+  _scan_egc(input_p, input_len, trunc_size, &truncation_required, &cut_len, &error_occurred);
+
+  if (error_occurred) croak("input string not valid UTF-8 (detected at byte offset %lu in %s)", cut_len, func_name);
+
+  output_len = cut_len + ellipsis_len;
+
+  if (in_place) {
+    output = input;
+
+    if (truncation_required) {
+      SvGROW(output, output_len);
+      SvCUR_set(output, output_len);
+      output_p = SvPV(output, output_len);
+
+      memcpy(output_p + cut_len, ellipsis_p, ellipsis_len);
+    }
+  } else {
+    if (truncation_required) {
+      output = newSVpvn("", 0);
+
+      SvGROW(output, output_len);
+      SvCUR_set(output, output_len);
+      output_p = SvPV(output, output_len);
+
+      memcpy(output_p, input_p, cut_len);
+      memcpy(output_p + cut_len, ellipsis_p, ellipsis_len);
+    } else {
+      output = newSVpvn(input_p, input_len);
+    }
+  }
+
+  SvUTF8_on(output);
+
+  return output;
+}
+
+
+
+SV *truncate_egc(SV *input, long trunc_len, ...) {
+  Inline_Stack_Vars;
+
+  SV *ellipsis;
+
+  const char *func_name = "truncate_egc";
+
+  if (Inline_Stack_Items == 2) {
+    ellipsis = NULL;
+  } else if (Inline_Stack_Items == 3) {
+    ellipsis = Inline_Stack_Item(2);
+  } else {
+    croak("too many items passed to %s", func_name);
+  }
+
+  return _truncate(input, trunc_len, ellipsis, 0, func_name);
+}
+
+
+void truncate_egc_inplace(SV *input, long trunc_len, ...) {
+  Inline_Stack_Vars;
+
+  SV *ellipsis;
+
+  const char *func_name = "truncate_egc_inplace";
+
+  if (SvREADONLY(input)) croak("input string can't be read-only with inplace mode at %s", func_name);
+
+  if (Inline_Stack_Items == 2) {
+    ellipsis = NULL;
+  } else if (Inline_Stack_Items == 3) {
+    ellipsis = Inline_Stack_Item(2);
+  } else {
+    croak("too many items passed to %s", func_name);
+  }
+
+  _truncate(input, trunc_len, ellipsis, 1, func_name);
+}
+
+
+
+
 
 
 __END__
@@ -203,6 +250,10 @@ Unicode::Truncate - Unicode-aware efficient string truncation
     truncate_egc("\xff", 10)
     ## throws exception "input string not valid UTF-8"
 
+    my $str = "hello world";
+    truncate_egc_inplace($str, 5)
+    ## $str is now "hello";
+
 =head1 DESCRIPTION
 
 This module is for truncating UTF-8 encoded Unicode text to particular byte lengths while inflicting the least amount of data corruption possible. The resulting truncated string will be no longer than your specified number of bytes (after UTF-8 encoding).
@@ -211,22 +262,22 @@ All truncated strings will continue to be valid UTF-8: it won't cut in the middl
 
 The C<truncate_egc> function truncates only between L<extended grapheme clusters|> (as defined by L<Unicode TR29|http://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries>).
 
-The C<truncate_egc_inplace> function is identical to C<truncate_egc> except that the input string will be modified so that no copying occurs.
+The C<truncate_egc_inplace> function is identical to C<truncate_egc> except that the input string will be modified so that no copying occurs. If you pass in a read-only value it will throw an exception.
 
-Eventually I plan on supporting other boundaries such as word and sentence. Those functions will be named C<truncate_word> and so on.
+Eventually I'd like to support other boundaries such as words and sentences. Those functions will be named C<truncate_word> and so on.
 
 
 =head1 RATIONALE
 
-Why not just use C<substr> on a string before UTF-8 encoding it? The main problem is that the number of bytes that an encoded string will consume is not known until after you encode it. It depends on how many "high" code-points are in the string, how "high" those code-points are, the normalisation form chosen, and (relatedly) how many combining marks are used. Even before encoding, C<substr> also may cut in front of combining marks.
-
-Truncating post-encoding may result in invalid UTF-8 partials at the end of your string, as well as cutting in front of combining marks.
+Of course in a perfect world we would only need to worry about the amount of space some text takes up on the screen, in the real world we often have to or want to make sure things fit within certain byte size capacity limits. Many databases, network protocols, and file-formats require honouring byte-length restrictions. Even if they automatically truncate for you, are they doing it properly and consistently? On many file-systems, file and directory names are subject to byte-size limits. Many APIs that use C structs have fixed limits as well. You may even wish to do things like guarantee that a collection of news headlines will fit in a single ethernet packet.
 
 I knew I had to write this module after I asked Tom Christiansen about the best way to truncate unicode to fit in fixed-byte fields and he got angry and told me to never do that. :)
 
-Of course in a perfect world we would only need to worry about the amount of space some text takes up on the screen, in the real world we often have to or want to make sure things fit within certain byte size capacity limits. Many databases, network protocols, and file-formats require honouring byte-length restrictions. Even if they automatically truncate for you, are they doing it properly and consistently? On many file-systems, file and directory names are subject to byte-size limits. Many APIs that use C structs have fixed limits as well. You may even wish to do things like guarantee that a collection of news headlines will fit in a single ethernet packet.
+Why not just use C<substr> on a string before UTF-8 encoding it? The main problem with that is the number of bytes that an encoded string will consume is not known until after you encode it. It depends on how many "high" code-points are in the string, how "high" those code-points are, the normalisation form chosen, and (relatedly) how many combining marks are used. Even with perl unicode strings (ie before encoding), using C<substr> will cut in front of combining marks.
 
-One interesting aspect of unicode's combining marks is that there is no specified limit to the number of combining marks that can be applied. So in some interpretations a single decomposed unicode character can take up an arbitrarily large number of bytes in its UTF-8 encoding. However, there are various recommendations such as the unicode standard L<UAX15-D3|http://www.unicode.org/reports/tr15/#UAX15-D3> "stream-safe" limit of 30. Reportedly the largest known "legitimate" use is a 1 base + 8 combining marks grapheme used in a Tibetan script.
+Truncating post-encoding may result in invalid UTF-8 partials at the end of your string, as well as cutting in front of combining marks.
+
+One interesting aspect of unicode's combining marks is that there is no specified limit to the number of combining marks that can be applied. So in some interpretations a single character/grapheme/whatever can take up an arbitrarily large number of bytes. However, there are various recommendations such as the unicode standard L<UAX15-D3|http://www.unicode.org/reports/tr15/#UAX15-D3> "stream-safe" limit of 30. Reportedly the largest known "legitimate" use is a 1 base + 8 combining marks grapheme used in a Tibetan script.
 
 
 =head1 ELLIPSIS
@@ -240,7 +291,7 @@ By default the ellipsis is the character U+2026 (…) however you can use any ot
 
 This module uses the L<ragel|http://www.colm.net/open-source/ragel/> state machine compiler to parse/validate UTF-8 and to determine the presence of combining characters. Ragel is nice because we can determine the truncation location with a single pass through the data in an optimised C loop.
 
-One of the requirements of this module is to also validate UTF-8. The consequence is that you can run it against strings with or without having decoded them with C<Encode::decode> first. This module will throw exceptions if the strings to be truncated aren't UTF-8. This requirement is so that you can minimise the amount of times you need to "decode" a user-supplied string. With this module, you can accept an arbitrary string from a web request (say), validate that it is UTF-8, truncate it if necessary, and write it out to a DB, all with only a single pass over the data.
+One of the requirements of this module was to additionally validate UTF-8 encoding. This is so you can run it against strings with or without having decoded them with C<Encode::decode> first. This module will throw exceptions if the strings to be truncated aren't UTF-8. This property lets us minimise the amount of times a user-supplied string is "decoded". With this module, you can accept an arbitrary string from a web request (say), validate that it is UTF-8, truncate it if necessary, and write it out to a DB, all with only a single pass over the data.
 
 As mentioned, this module will not scan further than it needs to in order to determine the truncation location. So creating a short truncation of a really long string doesn't require traversing the entire string. However, this module won't validate that the bytes beyond its truncation location are valid UTF-8.
 
@@ -267,6 +318,8 @@ It may be possible to use the regexp engine's C<\X> combined with C<(?{})> in so
 Hopefully this module should "do the right thing" in most cases but of course I can't test it on all the writing systems of the world so I don't know the severity of the corruption in all situations. It's possible that the corruption can be minimised in additional ways without sacrificing the simplicity or efficiency of the algorithm. If you have any ideas please let me know and I'll try to incorporate them.
 
 Eventually I'd like to make it be able to truncate on other boundaries specified by unicode, such as word, sentence, and line.
+
+It would be nice to be able to apply an EGC limit such as 30.
 
 This module doesn't handle the UTF-16 surrogate range in the grapheme properties files because C<Encode::encode> isn't encoding them the way I'd expect. That's OK these aren't valid UTF-8 anyway.
 

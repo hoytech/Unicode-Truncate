@@ -4,6 +4,7 @@ use utf8;
 
 use Test::More qw(no_plan);
 use Test::Exception;
+use Test::ZeroCopy;
 
 use Unicode::Truncate;
 
