@@ -16,64 +16,91 @@ our @EXPORT = qw(truncate_egc);
 use Unicode::Truncate::Inline C => 'DATA', FILTERS => [ [ 'Uniprops2Ragel' ], [ Ragel => '-G2' ] ];
 
 
-sub truncate_egc {
-  my ($input, $len, $ellipsis) = @_;
-
-  croak "need to pass an input string to truncate_egc" if !defined $input;
-  croak "need to pass a positive truncation length to truncate_egc" if !defined $len || $len < 0;
-
-  $ellipsis = '…' if !defined $ellipsis;
-  $ellipsis = encode('UTF-8', $ellipsis);
-
-  $len -= length($ellipsis);
-
-  croak "length of ellipsis is longer than truncation length" if $len < 0;
-
-  my ($truncation_required, $cut_len, $error_occurred) = _scan_string($input, $len);
-
-  croak "input string not valid UTF-8 (detected at byte offset $cut_len)" if $error_occurred;
-
-  my $enc_input = encode('UTF-8', $input);
-
-  if ($truncation_required) {
-    my $output = substr($enc_input, 0, $cut_len) . $ellipsis;
-    Encode::_utf8_on($output);
-    return $output;
-  }
-
-  my $output = $enc_input;
-  Encode::_utf8_on($output);
-  return $output;
-}
-
-
-
 1;
 
 
 __DATA__
 __C__
 
+
+SV *truncate_egc(SV *input, long trunc_size_long, ...) {
+  Inline_Stack_Vars;
+
+  size_t trunc_size;
+  SV *ellipsis;
+  char *input_p, *ellipsis_p;
+  size_t input_len, ellipsis_len;
+  size_t cut_len;
+  int truncation_required, error_occurred;
+  SV *output;
+  char *output_p;
+  size_t output_len;
+
+  SvUPGRADE(input, SVt_PV);
+  if (!SvPOK(input)) croak("need to pass a string in as first argument to truncate_egc");
+
+  input_len = SvCUR(input);
+  input_p = SvPV(input, input_len);
+
+  if (trunc_size_long < 0) croak("trunc size argument to truncate_egc must be >= 0");
+  trunc_size = (size_t) trunc_size_long;
+
+  if (Inline_Stack_Items == 2) {
+    ellipsis_len = 3;
+    ellipsis_p = "\xE2\x80\xA6";
+  } else if (Inline_Stack_Items == 3) {
+    ellipsis = Inline_Stack_Item(2);
+    ellipsis_len = SvCUR(ellipsis);
+    ellipsis_p = SvPV(ellipsis, ellipsis_len);
+  } else if (Inline_Stack_Items > 3) {
+    croak("too many items passed to truncate_egc");
+  }
+
+  if (ellipsis_len > trunc_size) croak("length of ellipsis is longer than truncation length");
+  trunc_size -= ellipsis_len;
+
+  _scan_egc(input_p, input_len, trunc_size, &truncation_required, &cut_len, &error_occurred);
+
+  if (error_occurred) croak("input string not valid UTF-8 (detected at byte offset %lu)", cut_len);
+
+  if (truncation_required) {
+    output_len = cut_len + ellipsis_len;
+
+    output = newSVpvn("", 0);
+
+    SvGROW(output, output_len);
+    SvCUR_set(output, output_len);
+
+    output_p = SvPV(output, output_len);
+
+    memcpy(output_p, input_p, cut_len);
+    memcpy(output_p + cut_len, ellipsis_p, ellipsis_len);
+  } else {
+    output = newSVpvn(input_p, input_len);
+  }
+
+  SvUTF8_on(output);
+
+  return output;
+}
+
+
+
 %%{
-  machine egc_truncator;
+  machine egc_scanner;
 
   write data;
 }%%
 
 
-void _scan_string(SV *string, size_t trunc_size) {
+void _scan_egc(char *input, size_t len, size_t trunc_size, int *truncation_required_out, size_t *cut_len_out, int *error_occurred_out) {
   size_t cut_len = 0;
   int truncation_required = 0, error_occurred = 0;
 
-  size_t len;
   char *start, *p, *pe, *eof, *ts, *te;
   int cs, act;
  
-  SvUPGRADE(string, SVt_PV);
-  if (!SvPOK(string)) croak("attempting to truncate_egc non-string object");
-
-  len = SvCUR(string);
-  ts = start = p = SvPV(string, len);
+  ts = start = p = input;
   te = eof = pe = p + len;
 
   %%{
@@ -99,17 +126,18 @@ void _scan_string(SV *string, size_t trunc_size) {
 
     RI_Sequence = Regional_Indicator+;
 
-    Hangul_Syllable = L* V+ T* |
+    Hangul_Syllable = L* V+ T*    |
                       L* LV V* T* |
-                      L* LVT T* |
-                      L+ |
+                      L* LVT T*   |
+                      L+          |
                       T+;
 
     main := |*
               CRLF => record_cut;
 
               (
-                ((Any_UTF8 - Control) | Hangul_Syllable | RI_Sequence)
+                ## No Prepend characters in unicode 7.0
+                (RI_Sequence | Hangul_Syllable | (Any_UTF8 - Control))
                 (Extend | SpacingMark)*
               ) => record_cut;
 
@@ -123,17 +151,14 @@ void _scan_string(SV *string, size_t trunc_size) {
 
   done:
 
-  if (cs < egc_truncator_first_final) {
+  if (cs < egc_scanner_first_final) {
     error_occurred = 1;
     cut_len = p - start;
   }
 
-  Inline_Stack_Vars;
-  Inline_Stack_Reset;
-  Inline_Stack_Push(sv_2mortal(newSViv(truncation_required)));
-  Inline_Stack_Push(sv_2mortal(newSViv(cut_len)));
-  Inline_Stack_Push(sv_2mortal(newSViv(error_occurred)));
-  Inline_Stack_Done;
+  *truncation_required_out = truncation_required;
+  *cut_len_out = cut_len;
+  *error_occurred_out = error_occurred;
 }
 
 
