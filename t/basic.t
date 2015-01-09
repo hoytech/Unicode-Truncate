@@ -11,6 +11,7 @@ use Unicode::Truncate;
 ## basic
 
 is(truncate_egc('hello world', 7), 'hell…');
+is(truncate_egc('hello world', 7, '...'), 'hell...');
 is(truncate_egc('hello world', 7, ''), 'hello w');
 
 is(truncate_egc('深圳', 5), '…');

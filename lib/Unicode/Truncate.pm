@@ -10,7 +10,7 @@ use Encode;
 
 require Exporter;
 use base 'Exporter';
-our @EXPORT = qw(truncate_egc);
+our @EXPORT = qw(truncate_egc truncate_egc_inplace);
 
 
 use Unicode::Truncate::Inline C => 'DATA', FILTERS => [ [ 'Uniprops2Ragel' ], [ Ragel => '-G2' ] ];
@@ -23,7 +23,8 @@ __DATA__
 __C__
 
 
-SV *truncate_egc(SV *input, long trunc_size_long, ...) {
+
+SV *truncate_egc(SV *input, long trunc_len, ...) {
   Inline_Stack_Vars;
 
   size_t trunc_size;
@@ -42,12 +43,12 @@ SV *truncate_egc(SV *input, long trunc_size_long, ...) {
   input_len = SvCUR(input);
   input_p = SvPV(input, input_len);
 
-  if (trunc_size_long < 0) croak("trunc size argument to truncate_egc must be >= 0");
-  trunc_size = (size_t) trunc_size_long;
+  if (trunc_len < 0) croak("trunc size argument to truncate_egc must be >= 0");
+  trunc_size = (size_t) trunc_len;
 
   if (Inline_Stack_Items == 2) {
     ellipsis_len = 3;
-    ellipsis_p = "\xE2\x80\xA6";
+    ellipsis_p = "\xE2\x80\xA6"; // UTF-8 encoded U+2026 ellipsis character
   } else if (Inline_Stack_Items == 3) {
     ellipsis = Inline_Stack_Item(2);
 
@@ -88,6 +89,10 @@ SV *truncate_egc(SV *input, long trunc_size_long, ...) {
   SvUTF8_on(output);
 
   return output;
+}
+
+SV *truncate_egc_inplace(SV *input, long trunc_len, ...) {
+  croak("not impl");
 }
 
 
@@ -168,8 +173,9 @@ void _scan_egc(char *input, size_t len, size_t trunc_size, int *truncation_requi
 }
 
 
-
 __END__
+
+
 
 =encoding utf-8
 
@@ -179,6 +185,7 @@ Unicode::Truncate - Unicode-aware efficient string truncation
 
 =head1 SYNOPSIS
 
+    use utf8;
     use Unicode::Truncate;
 
     truncate_egc("hello world", 7);
@@ -193,13 +200,20 @@ Unicode::Truncate - Unicode-aware efficient string truncation
     truncate_egc("née Jones", 5)'
     ## returns "n…" (not "ne…", even in NFD)
 
+    truncate_egc("\xff", 10)
+    ## throws exception "input string not valid UTF-8"
+
 =head1 DESCRIPTION
 
 This module is for truncating UTF-8 encoded Unicode text to particular byte lengths while inflicting the least amount of data corruption possible. The resulting truncated string will be no longer than your specified number of bytes (after UTF-8 encoding).
 
-All truncated strings will continue to be valid UTF-8: it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character.
+All truncated strings will continue to be valid UTF-8: it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character. It will in general try to preserve what users perceive as whole characters, with as little as possible mutilation at the truncation site.
 
 The C<truncate_egc> function truncates only between L<extended grapheme clusters|> (as defined by L<Unicode TR29|http://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries>).
+
+The C<truncate_egc_inplace> function is identical to C<truncate_egc> except that the input string will be modified so that no copying occurs.
+
+Eventually I plan on supporting other boundaries such as word and sentence. Those functions will be named C<truncate_word> and so on.
 
 
 =head1 RATIONALE
@@ -210,21 +224,25 @@ Truncating post-encoding may result in invalid UTF-8 partials at the end of your
 
 I knew I had to write this module after I asked Tom Christiansen about the best way to truncate unicode to fit in fixed-byte fields and he got angry and told me to never do that. :)
 
-Of course in a perfect world we would only need to worry about the amount of space some text takes up on the screen, in the real world we often have to or want to make sure things fit within certain byte size capacity limits. Many data-bases, network protocols, and file-formats require honouring byte-length restrictions. Even if they automatically truncate for you, are they doing it properly and consistently? On many file-systems, file and directory names are subject to byte-size limits. Many APIs that use C structs have fixed limits as well. You may even wish to do things like guarantee that a collection of news headlines will fit in a single ethernet packet.
+Of course in a perfect world we would only need to worry about the amount of space some text takes up on the screen, in the real world we often have to or want to make sure things fit within certain byte size capacity limits. Many databases, network protocols, and file-formats require honouring byte-length restrictions. Even if they automatically truncate for you, are they doing it properly and consistently? On many file-systems, file and directory names are subject to byte-size limits. Many APIs that use C structs have fixed limits as well. You may even wish to do things like guarantee that a collection of news headlines will fit in a single ethernet packet.
 
 One interesting aspect of unicode's combining marks is that there is no specified limit to the number of combining marks that can be applied. So in some interpretations a single decomposed unicode character can take up an arbitrarily large number of bytes in its UTF-8 encoding. However, there are various recommendations such as the unicode standard L<UAX15-D3|http://www.unicode.org/reports/tr15/#UAX15-D3> "stream-safe" limit of 30. Reportedly the largest known "legitimate" use is a 1 base + 8 combining marks grapheme used in a Tibetan script.
 
 
 =head1 ELLIPSIS
 
-When a string is truncated, C<truncate_egc> indicates this by appending an ellipsis. By default this is the character U+2026 (…) however you can use any other string by passing it in as the third argument. Note that in UTF-8 encoding the default ellipsis consumes 3 bytes (the same as 3 periods in a row). The length of the truncated content *including* the ellipsis is guaranteed to be no greater than the byte size limit you specified.
+When a string is truncated, C<truncate_egc> indicates this by appending an ellipsis. The length of the truncated content *including* the ellipsis is guaranteed to be no greater than the byte size limit you specified.
+
+By default the ellipsis is the character U+2026 (…) however you can use any other string by passing it in as the third argument. The ellipsis string must not contain invalid UTF-8 (it can be encoded or can contain perl high-code points, up to you). Note the default ellipsis consumes 3 bytes in UTF-8 encoding which is the same as 3 periods in a row.
 
 
 =head1 IMPLEMENTATION
 
 This module uses the L<ragel|http://www.colm.net/open-source/ragel/> state machine compiler to parse/validate UTF-8 and to determine the presence of combining characters. Ragel is nice because we can determine the truncation location with a single pass through the data in an optimised C loop.
 
-One feature of this design is that it will not scan further than it needs to in order to determine the truncation location. So creating short truncations of really long strings doesn't even require traversing the long strings.
+One of the requirements of this module is to also validate UTF-8. The consequence is that you can run it against strings with or without having decoded them with C<Encode::decode> first. This module will throw exceptions if the strings to be truncated aren't UTF-8. This requirement is so that you can minimise the amount of times you need to "decode" a user-supplied string. With this module, you can accept an arbitrary string from a web request (say), validate that it is UTF-8, truncate it if necessary, and write it out to a DB, all with only a single pass over the data.
+
+As mentioned, this module will not scan further than it needs to in order to determine the truncation location. So creating a short truncation of a really long string doesn't require traversing the entire string. However, this module won't validate that the bytes beyond its truncation location are valid UTF-8.
 
 Another purpose of this module is to be a "proof of concept" for the L<Inline::Filters::Ragel> source filter as well as a demonstration of the really cool L<Inline::Module> system.
 
@@ -239,20 +257,22 @@ There are several similar modules such as L<Text::Truncate>, L<String::Truncate>
 
 A reasonable "99%" solution is to encode your string as UTF-8, truncate at the byte-level with C<substr>, decode with C<Encode::FB_QUIET>, and then re-encode it to UTF-8. This will ensure that the output is always valid UTF-8, but will still risk corrupting unicode text that contains combining marks.
 
-Ricardo Signes suggested an algorithm using L<Unicode::GCString> which would be very correct but likely less efficient.
+Ricardo Signes suggested an algorithm using L<Unicode::GCString> which would also be correct but likely less efficient.
 
 It may be possible to use the regexp engine's C<\X> combined with C<(?{})> in some way but I haven't been able to figure that out.
 
 
 =head1 BUGS
 
-This module currently only implements a sub-set of unicode's L<grapheme cluster boundary rules|http://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries>. Eventually I plan to extend this so the module "does the right thing" in more cases. Of course I can't test this on all the writing systems of the world so I don't know the severity of the corruption in all situations. It's possible that the corruption can be minimised in additional ways without sacrificing the simplicity or efficiency of the algorithm. If you have any ideas please let me know and I'll try to incorporate them.
+Hopefully this module should "do the right thing" in most cases but of course I can't test it on all the writing systems of the world so I don't know the severity of the corruption in all situations. It's possible that the corruption can be minimised in additional ways without sacrificing the simplicity or efficiency of the algorithm. If you have any ideas please let me know and I'll try to incorporate them.
 
-One obvious enhancement for languages that use white-space is to chop off the last (potentially partial) word up to the next whitespace block: C<s/\S+$//> (note you'll have to worry about the ellipsis yourself in this case).
+Eventually I'd like to make it be able to truncate on other boundaries specified by unicode, such as word, sentence, and line.
+
+This module doesn't handle the UTF-16 surrogate range in the grapheme properties files because C<Encode::encode> isn't encoding them the way I'd expect. That's OK these aren't valid UTF-8 anyway.
+
+Perl internally supports characters outside what is officially unicode. This module only works with the official UTF-8 range so if you are using this perl extension (perhaps for some sort of non-unicode sentinel value) this module will throw an exception indicating invalid UTF-8 encoding (which is more of a feature than a bug IMO).
 
 Currently building this module requires L<Inline::Filters::Ragel> to be installed. I'd like to add an option to L<Inline::Module> that has ragel run at dist time instead.
-
-Perl internally supports characters outside what is officially unicode. This module only works with the official UTF-8 range so if you are using this perl extension (perhaps for some sort of non-unicode sentinel value) this module will throw an exception indicating invalid UTF-8 encoding.
 
 
 =head1 AUTHOR
@@ -261,7 +281,7 @@ Doug Hoyte, C<< <doug@hcsw.org> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2014 Doug Hoyte.
+Copyright 2014-2015 Doug Hoyte.
 
 This module is licensed under the same terms as perl itself.
 
