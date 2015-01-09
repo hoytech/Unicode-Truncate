@@ -15,6 +15,11 @@ my %args = (
       'Inline::Module' => '0.32',
       'Inline::Filters::Ragel' => '0.101', ## unfortunately... (requires ragel binary to be installed)
     },
+    TEST_REQUIRES => {
+      'Test::More' => 0,
+      'Test::Exception' => 0,
+      'Test::ZeroCopy' => 0,
+    },
     LIBS => [],
     DEFINE => '',
     LICENSE => 'perl',
