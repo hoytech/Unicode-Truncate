@@ -5,9 +5,6 @@ our $VERSION = '0.102';
 use strict;
 use utf8;
 
-use Carp;
-use Encode;
-
 require Exporter;
 use base 'Exporter';
 our @EXPORT = qw(truncate_egc truncate_egc_inplace);
