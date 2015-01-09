@@ -50,8 +50,14 @@ SV *truncate_egc(SV *input, long trunc_size_long, ...) {
     ellipsis_p = "\xE2\x80\xA6";
   } else if (Inline_Stack_Items == 3) {
     ellipsis = Inline_Stack_Item(2);
+
+    SvUPGRADE(ellipsis, SVt_PV);
+    if (!SvPOK(ellipsis)) croak("ellipsis must be a string in 3rd argument to truncate_egc");
+
     ellipsis_len = SvCUR(ellipsis);
     ellipsis_p = SvPV(ellipsis, ellipsis_len);
+
+    if (!is_utf8_string(ellipsis_p, ellipsis_len)) croak("ellipsis must be utf-8 encoded in 3rd argument to truncate_egc");
   } else if (Inline_Stack_Items > 3) {
     croak("too many items passed to truncate_egc");
   }
@@ -176,19 +182,24 @@ Unicode::Truncate - Unicode-aware efficient string truncation
     use Unicode::Truncate;
 
     truncate_egc("hello world", 7);
-    ## "hell…";
+    ## returns "hell…";
 
     truncate_egc("hello world", 7, '');
-    ## "hello w"
+    ## returns "hello w"
 
     truncate_egc('深圳', 7);
-    ## "深…"
+    ## returns "深…"
+
+    truncate_egc("née Jones", 5)'
+    ## returns "n…" (not "ne…", even in NFD)
 
 =head1 DESCRIPTION
 
 This module is for truncating UTF-8 encoded Unicode text to particular byte lengths while inflicting the least amount of data corruption possible. The resulting truncated string will be no longer than your specified number of bytes (after UTF-8 encoding).
 
-With this module's C<truncate_egc>, all truncated strings will continue to be valid UTF-8: it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character.
+All truncated strings will continue to be valid UTF-8: it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character.
+
+The C<truncate_egc> function truncates only between L<extended grapheme clusters|> (as defined by L<Unicode TR29|http://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries>).
 
 
 =head1 RATIONALE

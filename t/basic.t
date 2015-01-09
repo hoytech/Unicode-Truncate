@@ -33,10 +33,24 @@ is(truncate_egc('До свидания', 15, ''), 'До свида');
 is(truncate_egc('До свидания', 16, ''), 'До свида');
 is(truncate_egc('До свидания', 17, ''), 'До свидан');
 
-## malformed error reporting
+## input encoding
+
+is(truncate_egc("\xe6\xb7\xb1\xe5\x9c\xb3", 7), '深…', "input doesn't need to be decoded");
 
 throws_ok { truncate_egc("\xFF", 100) } qr/not valid UTF-8 .*detected at byte offset 0\b/;
 throws_ok { truncate_egc("cbs\xCE\x80dd\xFFasdff", 100) } qr/not valid UTF-8 .*detected at byte offset 7\b/;
+
+## malformed error reporting
+
+throws_ok { truncate_egc() } qr/Usage:/, "needs input arg";
+throws_ok { truncate_egc("blah") } qr/Usage:/, "needs trunc_size arg";
+throws_ok { truncate_egc("blah", -1) } qr/must be >= 0/, "trunc_size can't be negative";
+throws_ok { truncate_egc(undef, -1) } qr/need to pass a string/, "input must be string";
+
+throws_ok { truncate_egc("blah", 3, undef) } qr/ellipsis must be a string/;
+throws_ok { truncate_egc("blah", 3, "\xff") } qr/ellipsis must be utf-8 encoded/;
+
+throws_ok { truncate_egc("blah", 3, "...", 1) } qr/too many items passed/;
 
 throws_ok { truncate_egc("blah", 0) } qr/length of ellipsis is longer than truncation length/;
 throws_ok { truncate_egc("blah", 1) } qr/length of ellipsis is longer than truncation length/;
