@@ -15,8 +15,12 @@ open(my $fh, '<:encoding(utf-8)', 'unidata/GraphemeBreakTest.txt')
 while(<$fh>) {
   next if /^#/;
 
-  /^(.*?)#(.*)$/ || die "bad line format";
-  my ($spec, $desc) = ($1, $2);
+  next if /<surrogate-/; ## skip surrogate tests for now
+
+  chomp;
+
+  /^(.*?)#/ || die "bad line format";
+  my ($spec, $desc) = ($1, $_);
 
   $spec =~ /^\s*÷/ || die "expected start to be breakable ($spec)";
   $spec =~ /÷\s*$/ || die "expected end to be breakable ($spec)";
@@ -51,10 +55,10 @@ while(<$fh>) {
   my $failed;
 
   for my $i (0 .. $total_length) {
-#use Data::Dumper;print STDERR Dumper($full);
-    my $truncated = truncate_utf8(encode('UTF-8', $full), $i, '');
+    my $full_copy = "" . $full;
+    my $truncated = truncate_utf8($full_copy, $i, '');
 
-    my $truncated_length = length($truncated);
+    my $truncated_length = length(encode('UTF-8', $truncated));
 
     if (!grep { $_ == $truncated_length } @ok_lengths) {
       $failed = 1;

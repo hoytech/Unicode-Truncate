@@ -64,3 +64,12 @@ is(truncate_utf8("ne\x{301}\x{1DD9}\x{FE26}e", 9, ''), "n");
 is(truncate_utf8("ne\x{301}\x{1DD9}\x{FE26}e", 10, ''), "ne\x{301}\x{1DD9}\x{FE26}");
 is(truncate_utf8("ne\x{301}\x{1DD9}\x{FE26}e", 11, ''), "ne\x{301}\x{1DD9}\x{FE26}e");
 is(truncate_utf8("ne\x{301}\x{1DD9}\x{FE26}e", 12, ''), "ne\x{301}\x{1DD9}\x{FE26}e");
+
+is(truncate_utf8("e\x{302}", 3, ''), "e\x{302}");
+is(truncate_utf8("e\x{302}", 2, ''), "");
+
+is(truncate_utf8(" \x{308} ", 0, ''), "");
+is(truncate_utf8(" \x{308} ", 1, ''), "");
+is(truncate_utf8(" \x{308} ", 2, ''), "");
+is(truncate_utf8(" \x{308} ", 3, ''), " \x{308}");
+is(truncate_utf8(" \x{308} ", 4, ''), " \x{308} ");

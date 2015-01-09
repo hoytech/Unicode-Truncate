@@ -33,14 +33,17 @@ sub truncate_utf8 {
 
   croak "input string not valid UTF-8 (detected at byte offset $cut_len)" if $error_occurred;
 
+  my $enc_input = encode('UTF-8', $input);
+
   if ($truncation_required) {
-    Encode::_utf8_off($input); ## FIXME: restore flag.. dynamic scope?
-    my $output = substr($input, 0, $cut_len) . $ellipsis;
+    my $output = substr($enc_input, 0, $cut_len) . $ellipsis;
     Encode::_utf8_on($output);
     return $output;
   }
 
-  return $input;
+  my $output = $enc_input;
+  Encode::_utf8_on($output);
+  return $output;
 }
 
 
@@ -53,25 +56,6 @@ __C__
 
 %%{
   machine utf8_truncator;
- 
-  ## Adapted from: http://www.w3.org/International/questions/qa-forms-utf-8
- 
-  utf8 = 0x00 .. 0x7F                               | # ASCII + control characters
-         0xC2..0xDF 0x80..0xBF                      | # non-overlong 2-byte
-         0xE0 0xA0..0xBF 0x80..0xBF                 | # excluding overlongs
-         (0xE1..0xEC | 0xEE | 0xEF) (0x80..0xBF){2} | # straight 3-byte
-         0xED 0x80..0x9F 0x80..0xBF                 | # excluding surrogates
-         0xF0 0x90..0xBF (0x80..0xBF){2}            | # planes 1-3
-         0xF1..0xF3 (0x80..0xBF){3}                 | # planes 4-15
-         0xF4 0x80..0x8F (0x80..0xBF){2}              # plane 16
-    ;
-
-  ## inc/Inline/Filters/Uniprops2Ragel.pm
-
-  ALL_UNIPROPS
-
-  combining = Extend;
-  non_combining = utf8 - combining;
 
   write data;
 }%%
@@ -93,20 +77,43 @@ void _scan_string(SV *string, size_t trunc_size) {
   te = eof = pe = p + len;
 
   %%{
-    action check_len {
+    action record_cut {
       if (p - start >= trunc_size) {
         truncation_required = 1;
         goto done;
       }
-    } 
 
-    action record_cut {
       cut_len = te - start;
     }
 
+
+    ## Extract properties from unidata/GraphemeBreakProperty.txt (see inc/Inline/Filters/Uniprops2Ragel.pm)
+
+    ALL_UNIPROPS
+
+
+    ## This regexp is pretty much a straight copy from the "extended grapheme cluster" row in this table:
+    ## http://www.unicode.org/reports/tr29/#Table_Combining_Char_Sequences_and_Grapheme_Clusters
+
+    CRLF = CR LF;
+
+    RI_Sequence = Regional_Indicator+;
+
+    Hangul_Syllable = L* V+ T* |
+                      L* LV V* T* |
+                      L* LVT T* |
+                      L+ |
+                      T+;
+
     main := |*
-              ( non_combining ) $check_len => record_cut;
-              ( non_combining? combining+ ) $check_len => record_cut;
+              CRLF => record_cut;
+
+              (
+                ((Any_UTF8 - Control) | Hangul_Syllable | RI_Sequence)
+                (Extend | SpacingMark)*
+              ) => record_cut;
+
+              Any_UTF8 => record_cut;
             *|;
 
 
