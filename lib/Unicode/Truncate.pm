@@ -295,20 +295,20 @@ One of the requirements of this module was to additionally validate UTF-8 encodi
 
 As mentioned, this module will not scan further than it needs to in order to determine the truncation location. So creating a short truncation of a really long string doesn't require traversing the entire string. However, this module won't validate that the bytes beyond its truncation location are valid UTF-8.
 
-Another purpose of this module is to be a "proof of concept" for the L<Inline::Filters::Ragel> source filter as well as a demonstration of the really cool L<Inline::Module> system.
+Another purpose of this module is to be a "proof of concept" for the L<Inline::Filters::Ragel> source filter as well as a demonstration of the really cool L<Inline::Module> distribution system.
 
 
 =head1 SEE ALSO
 
 L<Unicode-Truncate github repo|https://github.com/hoytech/Unicode-Truncate>
 
-Although very efficient, as discussed above, C<substr> will not be able to give you a guaranteed byte-length output (if done pre-encoding) and/or will potentially corrupt text (if done post-encoding).
+Although efficient, as discussed above, C<substr> will not be able to give you a guaranteed byte-length output (if done pre-encoding) and will corrupt text (pre and post-encoding).
 
 There are several similar modules such as L<Text::Truncate>, L<String::Truncate>, L<Text::Elide> but they are all essentially wrappers around C<substr> and are subject to its limitations.
 
-A reasonable "99%" solution is to encode your string as UTF-8, truncate at the byte-level with C<substr>, decode with C<Encode::FB_QUIET>, and then re-encode it to UTF-8. This will ensure that the output is always valid UTF-8, but will still risk corrupting unicode text that contains combining marks.
-
 Ricardo Signes suggested an algorithm using L<Unicode::GCString> which would also be correct but likely less efficient.
+
+A reasonable "99%" solution is to encode your string as UTF-8, truncate at the byte-level with C<substr>, decode with C<Encode::FB_QUIET>, and then re-encode it to UTF-8. This will ensure that the output is always valid UTF-8, but will still risk corrupting unicode text that contains combining marks.
 
 It may be possible to use the regexp engine's C<\X> combined with C<(?{})> in some way but I haven't been able to figure that out.
 

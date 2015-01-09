@@ -54,9 +54,9 @@ for my $i (0..10) {
       $non_reallocs++;
     } else {
       $reallocs++;
-      diag("REALLOC DETECTED AT $i");
+      diag("re-alloc detected at $i");
     }
   }
 
-  diag("TESTING REALLOCS up to $limit: $reallocs / $non_reallocs");
+  diag("Re-alloc summary up to $limit: $reallocs / $non_reallocs");
 }
