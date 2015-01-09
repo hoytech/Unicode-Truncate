@@ -56,7 +56,7 @@ while(<$fh>) {
 
   for my $i (0 .. $total_length) {
     my $full_copy = "" . $full;
-    my $truncated = truncate_utf8($full_copy, $i, '');
+    my $truncated = truncate_egc($full_copy, $i, '');
 
     my $truncated_length = length(encode('UTF-8', $truncated));
 

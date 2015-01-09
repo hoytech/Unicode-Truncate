@@ -10,17 +10,17 @@ use Encode;
 
 require Exporter;
 use base 'Exporter';
-our @EXPORT = qw(truncate_utf8);
+our @EXPORT = qw(truncate_egc);
 
 
 use Unicode::Truncate::Inline C => 'DATA', FILTERS => [ [ 'Uniprops2Ragel' ], [ Ragel => '-G2' ] ];
 
 
-sub truncate_utf8 {
+sub truncate_egc {
   my ($input, $len, $ellipsis) = @_;
 
-  croak "need to pass an input string to truncate_utf8" if !defined $input;
-  croak "need to pass a positive truncation length to truncate_utf8" if !defined $len || $len < 0;
+  croak "need to pass an input string to truncate_egc" if !defined $input;
+  croak "need to pass a positive truncation length to truncate_egc" if !defined $len || $len < 0;
 
   $ellipsis = '…' if !defined $ellipsis;
   $ellipsis = encode('UTF-8', $ellipsis);
@@ -55,7 +55,7 @@ __DATA__
 __C__
 
 %%{
-  machine utf8_truncator;
+  machine egc_truncator;
 
   write data;
 }%%
@@ -70,7 +70,7 @@ void _scan_string(SV *string, size_t trunc_size) {
   int cs, act;
  
   SvUPGRADE(string, SVt_PV);
-  if (!SvPOK(string)) croak("attempting to truncate_utf8 non-string object");
+  if (!SvPOK(string)) croak("attempting to truncate_egc non-string object");
 
   len = SvCUR(string);
   ts = start = p = SvPV(string, len);
@@ -123,7 +123,7 @@ void _scan_string(SV *string, size_t trunc_size) {
 
   done:
 
-  if (cs < utf8_truncator_first_final) {
+  if (cs < egc_truncator_first_final) {
     error_occurred = 1;
     cut_len = p - start;
   }
@@ -150,20 +150,20 @@ Unicode::Truncate - Unicode-aware efficient string truncation
 
     use Unicode::Truncate;
 
-    truncate_utf8("hello world", 7);
+    truncate_egc("hello world", 7);
     ## "hell…";
 
-    truncate_utf8("hello world", 7, '');
+    truncate_egc("hello world", 7, '');
     ## "hello w"
 
-    truncate_utf8('深圳', 7);
+    truncate_egc('深圳', 7);
     ## "深…"
 
 =head1 DESCRIPTION
 
 This module is for truncating UTF-8 encoded Unicode text to particular byte lengths while inflicting the least amount of data corruption possible. The resulting truncated string will be no longer than your specified number of bytes (after UTF-8 encoding).
 
-With this module's C<truncate_utf8>, all truncated strings will continue to be valid UTF-8: it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character.
+With this module's C<truncate_egc>, all truncated strings will continue to be valid UTF-8: it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character.
 
 
 =head1 RATIONALE
@@ -181,7 +181,7 @@ One interesting aspect of unicode's combining marks is that there is no specifie
 
 =head1 ELLIPSIS
 
-When a string is truncated, C<truncate_utf8> indicates this by appending an ellipsis. By default this is the character U+2026 (…) however you can use any other string by passing it in as the third argument. Note that in UTF-8 encoding the default ellipsis consumes 3 bytes (the same as 3 periods in a row). The length of the truncated content *including* the ellipsis is guaranteed to be no greater than the byte size limit you specified.
+When a string is truncated, C<truncate_egc> indicates this by appending an ellipsis. By default this is the character U+2026 (…) however you can use any other string by passing it in as the third argument. Note that in UTF-8 encoding the default ellipsis consumes 3 bytes (the same as 3 periods in a row). The length of the truncated content *including* the ellipsis is guaranteed to be no greater than the byte size limit you specified.
 
 
 =head1 IMPLEMENTATION
