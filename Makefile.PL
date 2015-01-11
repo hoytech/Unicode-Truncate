@@ -2,18 +2,12 @@ use strict;
 
 use ExtUtils::MakeMaker;
 
-use lib 'inc';
-use Inline::Module;
+use Inline::Module::LeanDist::MakefilePL;
 
 my %args = (
     NAME => 'Unicode::Truncate',
     VERSION_FROM => 'lib/Unicode/Truncate.pm',
     PREREQ_PM => {
-    },
-    BUILD_REQUIRES => {
-      'Inline::C' => '0.72',
-      'Inline::Module' => '0.32',
-      'Inline::Filters::Ragel' => '0.101', ## unfortunately... (requires ragel binary to be installed)
     },
     TEST_REQUIRES => {
       'Test::More' => 0,
@@ -28,13 +22,10 @@ my %args = (
     },
     postamble => {
       inline => {
-        module => 'Unicode::Truncate',
-        stub => 'Unicode::Truncate::Inline',
-        ilsm => 'Inline::C',
-        makestub => 1,
-        bundle => 0,
+        file => 'lib/Unicode/Truncate.pm',
       },
     },
+    OBJECT => '',
     META_MERGE => {
       resources => {
         repository => 'git://github.com/hoytech/Unicode-Truncate.git',
@@ -44,7 +35,7 @@ my %args = (
         develop => {
           requires => {
             'Inline::C' => '0.72',
-            'Inline::Module' => '0.32',
+            'Inline::Module::LeanDist' => '0.32',
             'Inline::Filters::Ragel' => '0.101',
           },
         },

@@ -3,14 +3,12 @@ package Unicode::Truncate;
 our $VERSION = '0.200';
 
 use strict;
-use utf8;
 
 require Exporter;
 use base 'Exporter';
 our @EXPORT = qw(truncate_egc truncate_egc_inplace);
 
-
-use Unicode::Truncate::Inline C => 'DATA', FILTERS => [ [ 'Uniprops2Ragel' ], [ Ragel => '-G2' ] ];
+use Inline::Module::LeanDist C => 'DATA', FILTERS => [ [ 'Uniprops2Ragel', push(@INC, 'inc') ], [ Ragel => '-G2' ] ];
 
 
 1;
@@ -257,7 +255,7 @@ This module is for truncating UTF-8 encoded Unicode text to particular byte leng
 
 All truncated strings will continue to be valid UTF-8: it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character. It will in general try to preserve what users perceive as whole characters, with as little as possible mutilation at the truncation site.
 
-The C<truncate_egc> function truncates only between L<extended grapheme clusters|> (as defined by L<Unicode TR29|http://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries>).
+The C<truncate_egc> function truncates only between L<extended grapheme clusters|https://en.wikipedia.org/wiki/Universal_Character_Set_characters#Characters_grapheme_clusters_and_glyphs> (as defined by L<Unicode TR29|http://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries>).
 
 The C<truncate_egc_inplace> function is identical to C<truncate_egc> except that the input string will be modified so that no copying occurs. If you pass in a read-only value it will throw an exception.
 
