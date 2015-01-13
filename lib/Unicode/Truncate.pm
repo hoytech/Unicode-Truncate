@@ -1,6 +1,6 @@
 package Unicode::Truncate;
 
-our $VERSION = '0.300';
+our $VERSION = '0.301';
 
 use strict;
 
