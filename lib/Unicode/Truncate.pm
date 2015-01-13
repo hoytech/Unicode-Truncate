@@ -243,11 +243,12 @@ Unicode::Truncate - Unicode-aware efficient string truncation
     ## returns "n…" (not "ne…", even in NFD)
 
     truncate_egc("\xff", 10)
-    ## throws exception "input string not valid UTF-8"
+    ## throws exception:
+    ##   "input string not valid UTF-8 (detected at byte offset 0 in truncate_egc)"
 
     my $str = "hello world";
-    truncate_egc_inplace($str, 5)
-    ## $str is now "hello";
+    truncate_egc_inplace($str, 8)
+    ## $str is now "hello…";
 
 =head1 DESCRIPTION
 
