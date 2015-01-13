@@ -290,7 +290,7 @@ One of the requirements of this module was to additionally validate UTF-8 encodi
 
 As mentioned, this module will not scan further than it needs to in order to determine the truncation location. So creating a short truncation of a really long string doesn't require traversing the entire string. However, this module won't validate that the bytes beyond its truncation location are valid UTF-8.
 
-Another purpose of this module is to be a "proof of concept" for the L<Inline::Filters::Ragel> source filter as well as a demonstration of the really cool L<Inline::Module> distribution system.
+Another purpose of this module is to be a "proof of concept" for L<Inline::Module::LeanDist> and L<Inline::Filters::Ragel>. This distribution concept was of course heavily inspired by L<Inline::Module>.
 
 
 =head1 SEE ALSO
