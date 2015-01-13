@@ -298,30 +298,28 @@ Another purpose of this module is to be a "proof of concept" for L<Inline::Modul
 
 L<Unicode-Truncate github repo|https://github.com/hoytech/Unicode-Truncate>
 
-Although efficient, as discussed above, C<substr> will not be able to give you a guaranteed byte-length output (if done pre-encoding) and will corrupt text (pre and post-encoding).
+Although efficient, as discussed above, C<substr> will not be able to give you a guaranteed byte-length output (if done pre-encoding) and will corrupt text (pre or post-encoding).
 
 There are several similar modules such as L<Text::Truncate>, L<String::Truncate>, L<Text::Elide> but they are all essentially wrappers around C<substr> and are subject to its limitations.
 
-Ricardo Signes suggested an algorithm using L<Unicode::GCString> which would also be correct but likely less efficient.
-
 A reasonable "99%" solution is to encode your string as UTF-8, truncate at the byte-level with C<substr>, decode with C<Encode::FB_QUIET>, and then re-encode it to UTF-8. This will ensure that the output is always valid UTF-8, but will still risk corrupting unicode text that contains combining marks.
+
+Ricardo Signes suggested an algorithm using L<Unicode::GCString> which would also be correct but likely less efficient.
 
 It may be possible to use the regexp engine's C<\X> combined with C<(?{})> in some way but I haven't been able to figure that out.
 
 
 =head1 BUGS
 
-Hopefully this module should "do the right thing" in most cases but of course I can't test it on all the writing systems of the world so I don't know the severity of the corruption in all situations. It's possible that the corruption can be minimised in additional ways without sacrificing the simplicity or efficiency of the algorithm. If you have any ideas please let me know and I'll try to incorporate them.
+Of course I can't test this module on all the writing systems of the world so I don't know the severity of the corruption in all situations. It's possible that the corruption can be minimised in additional ways without sacrificing the simplicity or efficiency of the algorithm. If you have any ideas please let me know and I'll try to incorporate them.
 
-Eventually I'd like to make it be able to truncate on other boundaries specified by unicode, such as word, sentence, and line.
+Eventually I'd like to truncate on other boundaries specified by unicode, such as word, sentence, and line.
 
 It would be nice to be able to apply an EGC limit such as 30.
 
 This module doesn't handle the UTF-16 surrogate range in the grapheme properties files because C<Encode::encode> isn't encoding them the way I'd need them to. That's OK because these aren't valid UTF-8 anyway.
 
-Perl internally supports characters outside what is officially unicode. This module only works with the official UTF-8 range so if you are using this perl extension (perhaps for some sort of non-unicode sentinel value) this module will throw an exception indicating invalid UTF-8 encoding (which is more of a feature than a bug IMO).
-
-Currently building this module requires L<Inline::Filters::Ragel> to be installed. I'd like to add an option to L<Inline::Module> that has ragel run at dist time instead.
+Perl internally supports characters outside what is officially unicode. This module only works with the official UTF-8 range so if you are using this perl extension (perhaps for some sort of non-unicode sentinel value) this module will throw an exception indicating invalid UTF-8 encoding (which is more of a feature than a bug given this module's primary purpose of validating and truncating untrusted, user-provided text).
 
 
 =head1 AUTHOR
