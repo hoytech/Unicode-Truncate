@@ -1,10 +1,8 @@
 Changes
-inc/Inline/Filters/Uniprops2Ragel.pm
 lib/Unicode/Truncate.pm
 Makefile.PL
 MANIFEST
 t/basic.t
 t/breaktest.t
 t/in_place.t
-unidata/GraphemeBreakProperty.txt
 unidata/GraphemeBreakTest.txt
