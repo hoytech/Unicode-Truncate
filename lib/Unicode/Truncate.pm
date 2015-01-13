@@ -251,11 +251,11 @@ Unicode::Truncate - Unicode-aware efficient string truncation
 
 =head1 DESCRIPTION
 
-This module is for truncating UTF-8 encoded Unicode text to particular byte lengths while inflicting the least amount of data corruption possible. The resulting truncated string will be no longer than your specified number of bytes (after UTF-8 encoding).
+This module is for truncating UTF-8 encoded Unicode text to particular B<byte> lengths while inflicting the least amount of data corruption possible. The resulting truncated string will be no longer than your specified number of bytes (after UTF-8 encoding).
 
 All truncated strings will continue to be valid UTF-8: it won't cut in the middle of a UTF-8 encoded code-point. Furthermore, if your text contains combining diacritical marks, this module will not cut in between a diacritical mark and the base character. It will in general try to preserve what users perceive as whole characters, with as little as possible mutilation at the truncation site.
 
-The C<truncate_egc> function truncates only between L<extended grapheme clusters|https://en.wikipedia.org/wiki/Universal_Character_Set_characters#Characters_grapheme_clusters_and_glyphs> (as defined by L<Unicode TR29|http://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries>).
+The C<truncate_egc> function truncates only between L<extended grapheme clusters|https://en.wikipedia.org/wiki/Universal_Character_Set_characters#Characters_grapheme_clusters_and_glyphs> (as defined by L<Unicode TR29|http://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries> version 7.0.0).
 
 The C<truncate_egc_inplace> function is identical to C<truncate_egc> except that the input string will be modified so that no copying occurs. If you pass in a read-only value it will throw an exception.
 
@@ -272,12 +272,12 @@ Why not just use C<substr> on a string before UTF-8 encoding it? The main proble
 
 Truncating post-encoding may result in invalid UTF-8 partials at the end of your string, as well as cutting in front of combining marks.
 
-One interesting aspect of unicode's combining marks is that there is no specified limit to the number of combining marks that can be applied. So in some interpretations a single character/grapheme/whatever can take up an arbitrarily large number of bytes. However, there are various recommendations such as the unicode standard L<UAX15-D3|http://www.unicode.org/reports/tr15/#UAX15-D3> "stream-safe" limit of 30. Reportedly the largest known "legitimate" use is a 1 base + 8 combining marks grapheme used in a Tibetan script.
+One interesting aspect of unicode's combining marks is that there is no specified limit to the number of combining marks that can be applied. So in some interpretations a single character/grapheme/whatever can take up an arbitrarily large number of bytes. However, there are various recommendations such as the L<Unicode UAX15-D3|http://www.unicode.org/reports/tr15/#UAX15-D3> "stream-safe" limit of 30. Reportedly the largest known "legitimate" use is a 1 base + 8 combining marks grapheme used in a Tibetan script.
 
 
 =head1 ELLIPSIS
 
-When a string is truncated, C<truncate_egc> indicates this by appending an ellipsis. The length of the truncated content *including* the ellipsis is guaranteed to be no greater than the byte size limit you specified.
+When a string is truncated, C<truncate_egc> indicates this by appending an ellipsis. The length of the truncated content B<including> the ellipsis is guaranteed to be no greater than the byte size limit you specified.
 
 By default the ellipsis is the character U+2026 (…) however you can use any other string by passing it in as the third argument. The ellipsis string must not contain invalid UTF-8 (it can be encoded or can contain perl high-code points, up to you). Note the default ellipsis consumes 3 bytes in UTF-8 encoding which is the same as 3 periods in a row.
 
@@ -316,7 +316,7 @@ Eventually I'd like to make it be able to truncate on other boundaries specified
 
 It would be nice to be able to apply an EGC limit such as 30.
 
-This module doesn't handle the UTF-16 surrogate range in the grapheme properties files because C<Encode::encode> isn't encoding them the way I'd expect. That's OK these aren't valid UTF-8 anyway.
+This module doesn't handle the UTF-16 surrogate range in the grapheme properties files because C<Encode::encode> isn't encoding them the way I'd need them to. That's OK because these aren't valid UTF-8 anyway.
 
 Perl internally supports characters outside what is officially unicode. This module only works with the official UTF-8 range so if you are using this perl extension (perhaps for some sort of non-unicode sentinel value) this module will throw an exception indicating invalid UTF-8 encoding (which is more of a feature than a bug IMO).
 
