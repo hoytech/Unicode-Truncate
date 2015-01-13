@@ -1,3 +1,6 @@
+0.300   2015-01-13
+  * Use Inline::Module::LeanDist instead of Inline::Module
+
 0.200   2015-01-09
   * Passes unicode's GraphemeBreakTest.txt test-cases
   * Inline::Filters::Uniprops2Ragel
