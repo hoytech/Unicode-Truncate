@@ -4,7 +4,6 @@ use utf8;
 
 use Test::More qw(no_plan);
 use Test::Exception;
-use Test::ZeroCopy;
 
 use Unicode::Truncate;
 
@@ -21,22 +20,18 @@ use Unicode::Truncate;
   is($str, "aABC");
 }
 
+{
+  my $str = "hello world";
+  truncate_egc_inplace($str, 6);
+  is($str, 'hel…');
+}
+
 for my $i (0..10) {
   throws_ok { truncate_egc_inplace("asdfj", $i, '') } qr/input string can't be read-only/;
 }
 
 
-{
-  my $str = "hello world";
-  my $addr = Test::ZeroCopy::get_pv_address($str);
-
-  truncate_egc_inplace($str, 6);
-
-  is($str, 'hel…');
-  is(Test::ZeroCopy::get_pv_address($str), $addr);
-}
-
-{
+if (eval { require Test::ZeroCopy }) {
   ## This "test" just prints some info on perl internals
 
   my $limit = 130;
@@ -59,4 +54,6 @@ for my $i (0..10) {
   }
 
   diag("Re-alloc summary up to $limit: $reallocs / $non_reallocs");
+} else {
+  diag("Test::ZeroCopy not installed");
 }
