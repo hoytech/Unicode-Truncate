@@ -1,6 +1,6 @@
 package Unicode::Truncate;
 
-our $VERSION = '0.302';
+our $VERSION = '0.303';
 
 use strict;
 
@@ -333,7 +333,7 @@ Doug Hoyte, C<< <doug@hcsw.org> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2014-2015 Doug Hoyte.
+Copyright 2014-2017 Doug Hoyte.
 
 This module is licensed under the same terms as perl itself.
 
