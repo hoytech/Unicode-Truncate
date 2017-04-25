@@ -139,6 +139,11 @@ static SV *_truncate(SV *input, long trunc_len, SV *ellipsis, int in_place, cons
 
   output_len = cut_len + ellipsis_len;
 
+  if (input_len <= trunc_len) {
+    truncation_required = 0;
+    output_len = input_len;
+  }
+
   if (in_place) {
     output = input;
 

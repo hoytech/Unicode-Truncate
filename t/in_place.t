@@ -15,7 +15,7 @@ use Unicode::Truncate;
 }
 
 {
-  my $str = "asd";
+  my $str = "asdfg";
   truncate_egc_inplace($str, 4, "ABC");
   is($str, "aABC");
 }

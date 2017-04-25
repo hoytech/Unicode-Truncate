@@ -14,11 +14,19 @@ is(truncate_egc('hello world', 7), 'hell…');
 is(truncate_egc('hello world', 7, '...'), 'hell...');
 is(truncate_egc('hello world', 7, ''), 'hello w');
 
+is(truncate_egc('hello world', 10), 'hello w…');
+is(truncate_egc('hello world', 11), 'hello world');
+is(truncate_egc('hello world', 12), 'hello world');
+
 is(truncate_egc('深圳', 5), '…');
-is(truncate_egc('深圳', 6), '深…');
-is(truncate_egc('深圳', 7), '深…');
-is(truncate_egc('深圳', 8), '深…');
+is(truncate_egc('深圳', 6), '深圳');
+is(truncate_egc('深圳', 7), '深圳');
+is(truncate_egc('深圳', 8), '深圳');
 is(truncate_egc('深圳', 9), '深圳');
+
+is(truncate_egc('深圳', 4, '..'), '..');
+is(truncate_egc('深圳', 5, '..'), '深..');
+is(truncate_egc('深圳', 6, '..'), '深圳');
 
 is(truncate_egc('深圳', 0, ''), '');
 is(truncate_egc('深圳', 1, ''), '');
@@ -36,7 +44,7 @@ is(truncate_egc('До свидания', 17, ''), 'До свидан');
 
 ## input encoding
 
-is(truncate_egc("\xe6\xb7\xb1\xe5\x9c\xb3", 7), '深…', "input doesn't need to be decoded");
+is(truncate_egc("\xe6\xb7\xb1\xe5\x9c\xb3", 5, '..'), '深..', "input doesn't need to be decoded");
 
 throws_ok { truncate_egc("\xFF", 100) } qr/not valid UTF-8 .*detected at byte offset 0\b/;
 throws_ok { truncate_egc("cbs\xCE\x80dd\xFFasdff", 100) } qr/not valid UTF-8 .*detected at byte offset 7\b/;
