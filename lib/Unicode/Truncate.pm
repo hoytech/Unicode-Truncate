@@ -241,8 +241,8 @@ Unicode::Truncate - Unicode-aware efficient string truncation
     truncate_egc("hello world", 7, '');
     ## returns "hello w"
 
-    truncate_egc('深圳', 7);
-    ## returns "深…"
+    truncate_egc("深圳", 5, "..");
+    ## returns "深.."
 
     truncate_egc("née Jones", 5)'
     ## returns "n…" (not "ne…", even in NFD)
